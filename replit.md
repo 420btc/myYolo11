@@ -6,7 +6,8 @@ This is a Streamlit-based web application that provides real-time object detecti
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+Preferred communication style: Simple, everyday language in Spanish.
+User wants a fully functional YOLO11 object detection application, not just a demo.
 
 ## System Architecture
 
