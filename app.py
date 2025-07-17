@@ -372,107 +372,152 @@ def handle_camera_capture(confidence, iou):
                         st.error(f"❌ Error procesando imagen: {str(e)}")
 
 def handle_webcam_input(confidence, iou):
-    """Manejar entrada de cámara web"""
-    st.subheader("📷 Detección en Cámara Web")
+    """Manejar entrada de cámara web en tiempo real"""
+    st.subheader("📷 Detección en Cámara Web - Tiempo Real")
     
     if st.session_state.model is None:
         st.warning("⚠️ Por favor, espera a que se cargue el modelo")
         return
     
-    # Información sobre permisos de cámara
+    # Información sobre la funcionalidad
     st.info("""
-    🔒 **Permisos de cámara requeridos:**
-    - En navegador local: Se solicitarán permisos automáticamente
-    - En Streamlit Cloud: La cámara puede no estar disponible por limitaciones de seguridad
-    - **Alternativa:** Usa la función de "Archivo de Video" para subir un video pregrabado
+    🎥 **Detección en tiempo real:**
+    - Usa la cámara web del navegador (igual que Captura de Imagen)
+    - Procesa frames continuamente para detección en vivo
+    - Compatible con Streamlit Cloud y navegadores locales
+    - Presiona "Iniciar" para comenzar el streaming
     """)
     
+    # Inicializar estados de sesión
+    if 'camera_active' not in st.session_state:
+        st.session_state.camera_active = False
+    if 'frame_count' not in st.session_state:
+        st.session_state.frame_count = 0
+    
     # Botones de control
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
-        start_button = st.button("🚀 Iniciar Cámara", type="primary")
+        if not st.session_state.camera_active:
+            start_button = st.button("🚀 Iniciar Cámara en Vivo", type="primary")
+        else:
+            start_button = False
     
     with col2:
-        stop_button = st.button("⏹️ Detener Cámara", type="secondary")
-    
-    with col3:
-        test_button = st.button("🔍 Probar Cámara", help="Probar diferentes métodos de acceso a la cámara")
+        if st.session_state.camera_active:
+            stop_button = st.button("⏹️ Detener Cámara", type="secondary")
+        else:
+            stop_button = False
     
     if stop_button:
-        st.session_state.stop_camera = True
-        st.info("📷 Cámara detenida")
-    
-    if test_button:
-        st.info("🔍 Probando diferentes métodos de acceso a la cámara...")
-        cap, message = init_camera()
-        if cap:
-            st.success(message)
-            cap.release()
-        else:
-            st.error(message)
-            st.warning("💡 **Sugerencias:**")
-            st.write("- Verifica que tu cámara esté conectada")
-            st.write("- Cierra otras aplicaciones que puedan estar usando la cámara")
-            st.write("- Intenta usar la función 'Archivo de Video' como alternativa")
+        st.session_state.camera_active = False
+        st.session_state.frame_count = 0
+        st.success("📷 Cámara detenida")
+        st.rerun()
     
     if start_button:
-        st.session_state.stop_camera = False
+        st.session_state.camera_active = True
+        st.session_state.frame_count = 0
+        st.rerun()
+    
+    # Si la cámara está activa, mostrar interfaz de streaming
+    if st.session_state.camera_active:
+        st.markdown("---")
+        st.subheader("📹 Streaming en Vivo")
         
-        # Placeholders para mostrar video
-        frame_placeholder = st.empty()
-        info_placeholder = st.empty()
+        # Crear placeholder para el video
+        video_placeholder = st.empty()
+        stats_placeholder = st.empty()
         
-        try:
-            # Inicializar cámara con múltiples métodos
-            cap, init_message = init_camera()
+        # Usar st.camera_input con key única para cada frame
+        camera_key = f"live_camera_{st.session_state.frame_count}"
+        
+        with video_placeholder.container():
+            # Usar la misma funcionalidad que funciona en "Captura de Imagen"
+            camera_image = st.camera_input(
+                "📸 Cámara en vivo - Presiona el botón de captura para procesar",
+                key=camera_key,
+                help="La imagen se procesará automáticamente cuando captures"
+            )
             
-            if not cap:
-                st.error(init_message)
-                st.warning("🔄 **Alternativas disponibles:**")
-                st.write("1. **Archivo de Video**: Sube un video pregrabado")
-                st.write("2. **Imagen**: Sube una imagen estática")
-                st.write("3. **Cámara local**: Ejecuta la aplicación localmente con `python run.py`")
-                return
-            
-            st.success(init_message)
-            frame_count = 0
-            
-            while not st.session_state.stop_camera:
-                ret, frame = cap.read()
+            if camera_image is not None:
+                # Procesar la imagen capturada
+                image = Image.open(camera_image)
                 
-                if not ret:
-                    st.error("❌ No se pudo leer de la cámara")
-                    break
-                
-                frame_count += 1
-                
-                # Procesar cada 3 frames para mejor rendimiento
-                if frame_count % 3 == 0:
-                    # Ejecutar inferencia
-                    results = st.session_state.model(frame, conf=confidence, iou=iou, device='cpu')
-                    
-                    # Anotar frame
-                    annotated_frame = results[0].plot()
-                    
-                    # Convertir BGR a RGB para Streamlit
-                    annotated_frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-                    
-                    # Mostrar frame
-                    frame_placeholder.image(annotated_frame_rgb, channels="RGB", use_container_width=True)
-                    
-                    # Mostrar información
-                    num_detections = len(results[0].boxes) if results[0].boxes is not None else 0
-                    info_placeholder.info(f"📊 Detecciones: {num_detections} | Frame: {frame_count}")
-                
-                # Pequeña pausa para control de FPS
-                time.sleep(0.03)
-            
-            cap.release()
-            
-        except Exception as e:
-            st.error(f"❌ Error con la cámara: {str(e)}")
-            st.info("💡 Asegúrate de que tu cámara esté conectada y no esté siendo usada por otra aplicación")
+                # Ejecutar inferencia
+                with st.spinner("Procesando frame..."):
+                    try:
+                        results = st.session_state.model(image, conf=confidence, iou=iou, device='cpu')
+                        
+                        # Mostrar imagen con detecciones
+                        annotated_image = results[0].plot()
+                        annotated_pil = Image.fromarray(annotated_image)
+                        
+                        # Mostrar resultado
+                        st.image(annotated_pil, use_container_width=True)
+                        
+                        # Mostrar estadísticas
+                        detections = len(results[0].boxes)
+                        st.session_state.frame_count += 1
+                        
+                        with stats_placeholder.container():
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("Frames procesados", st.session_state.frame_count)
+                            with col2:
+                                st.metric("Detecciones", detections)
+                            with col3:
+                                st.metric("Confianza", f"{confidence:.2f}")
+                        
+                        # Mostrar detecciones encontradas
+                        if detections > 0:
+                            st.success(f"✅ {detections} objetos detectados")
+                            
+                            # Detalles de detección en un expander
+                            with st.expander("📋 Detalles de Detección"):
+                                for i, box in enumerate(results[0].boxes):
+                                    class_id = int(box.cls[0])
+                                    conf = float(box.conf[0])
+                                    class_name = results[0].names[class_id]
+                                    st.write(f"**{i+1}.** {class_name} - Confianza: {conf:.2f}")
+                        else:
+                            st.info("No se detectaron objetos en este frame")
+                        
+                        # Auto-refresh para continuar el streaming
+                        if st.session_state.camera_active:
+                            time.sleep(0.1)  # Pequeña pausa para evitar sobrecarga
+                            st.rerun()
+                            
+                    except Exception as e:
+                        st.error(f"❌ Error procesando frame: {str(e)}")
+        
+        # Instrucciones para el usuario
+        st.markdown("---")
+        st.info("""
+        💡 **Instrucciones:**
+        - Presiona el botón de captura en la cámara para procesar cada frame
+        - Los resultados se mostrarán automáticamente
+        - Presiona "Detener Cámara" para finalizar
+        """)
+    
+    else:
+        # Mostrar información cuando la cámara no está activa
+        st.markdown("---")
+        st.markdown("""
+        ### 🎯 Funcionalidades disponibles:
+        
+        **📹 Cámara Web (Tiempo Real):**
+        - Streaming continuo con detección frame por frame
+        - Usa la cámara web del navegador
+        - Compatible con Streamlit Cloud
+        
+        **📸 Captura de Imagen:**
+        - Captura una sola imagen para análisis
+        - Perfecto para análisis detallado
+        - Misma tecnología de cámara
+        
+        **💡 Recomendación:** Si tienes problemas con el streaming, usa "Captura de Imagen" para análisis individual.
+        """)
 
 if __name__ == "__main__":
     main()
