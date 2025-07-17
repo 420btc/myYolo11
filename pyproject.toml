@@ -1,12 +1,14 @@
 [project]
 name = "repl-nix-workspace"
 version = "0.1.0"
-description = "Add your description here"
+description = "YOLO11 Object Detection with Streamlit"
 requires-python = ">=3.11"
 dependencies = [
     "streamlit>=1.47.0",
     "pillow",
     "numpy",
+    "ultralytics",
+    "opencv-python",
 ]
 
 [[tool.uv.index]]
