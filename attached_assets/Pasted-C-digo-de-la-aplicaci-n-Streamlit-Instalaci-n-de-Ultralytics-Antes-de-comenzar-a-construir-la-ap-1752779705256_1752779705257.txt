@@ -1,0 +1,49 @@
+Código de la aplicación Streamlit
+Instalación de Ultralytics
+
+Antes de comenzar a construir la aplicación, asegúrate de tener instalado el paquete de python Ultralytics. Puedes instalarlo usando el comando pip install ultralytics
+
+Inferencia usando Streamlit con Ultralytics YOLO
+
+
+CLI
+Python
+
+from ultralytics import solutions
+
+inf = solutions.Inference(
+    model="yolo11n.pt",  # you can use any model that Ultralytics support, i.e. YOLO11, or custom trained model
+)
+
+inf.inference()
+
+# Make sure to run the file using command `streamlit run path/to/file.py`
+
+Esto iniciará la aplicación Streamlit en tu navegador web predeterminado. Verás el título principal, el subtítulo y la barra lateral con opciones de configuración. Selecciona el modelo YOLO11 que desees, establece la confianza y los umbrales NMS, y haz clic en el botón "Start" para comenzar la detección de objetos en tiempo real.
+
+Opcionalmente, puedes proporcionar un modelo específico en Python:
+
+Aplicación Streamlit con un modelo personalizado
+
+
+Python
+
+from ultralytics import solutions
+
+inf = solutions.Inference(
+    model="yolo11n.pt",  # you can use any model that Ultralytics support, i.e. YOLO11, YOLOv10
+)
+
+inf.inference()
+
+# Make sure to run the file using command `streamlit run path/to/file.py`
+
+Cómo funciona
+Internamente, la aplicación Streamlit utiliza el módulo de soluciones de Ultralytics para crear una interfaz interactiva. Cuando inicia la inferencia, la aplicación:
+
+Captura video desde tu cámara web o archivo de video cargado
+Procesa cada fotograma a través del modelo YOLO11
+Aplica la detección de objetos con los umbrales de confianza e IoU especificados
+Muestra tanto los fotogramas originales como los anotados en tiempo real.
+Habilita opcionalmente el seguimiento de objetos si se selecciona
+La aplicación proporciona una interfaz limpia y fácil de usar con controles para ajustar los parámetros del modelo e iniciar/detener la inferencia en cualquier momento.
