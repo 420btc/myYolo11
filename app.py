@@ -1,12 +1,25 @@
 import streamlit as st
-from ultralytics import YOLO
 import tempfile
 import os
-import cv2
 import numpy as np
 from PIL import Image
 import threading
 import time
+
+# Intentar importar dependencias con manejo de errores
+try:
+    from ultralytics import YOLO
+    YOLO_AVAILABLE = True
+except ImportError as e:
+    st.error(f"Error importando YOLO: {e}")
+    YOLO_AVAILABLE = False
+
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError as e:
+    st.error(f"Error importando OpenCV: {e}")
+    CV2_AVAILABLE = False
 
 def main():
     # Configuración de la página
@@ -20,6 +33,17 @@ def main():
     # Título principal
     st.title("🎯 YOLO11 Detección de Objetos en Tiempo Real")
     st.markdown("### Powered by Ultralytics YOLO11")
+    
+    # Verificar dependencias
+    if not YOLO_AVAILABLE:
+        st.error("❌ YOLO11 no está disponible. Verifica que 'ultralytics' esté instalado.")
+        st.info("💡 Instala las dependencias: `pip install ultralytics`")
+        return
+    
+    if not CV2_AVAILABLE:
+        st.error("❌ OpenCV no está disponible. Verifica que 'opencv-python-headless' esté instalado.")
+        st.info("💡 Instala las dependencias: `pip install opencv-python-headless`")
+        return
     
     # Sidebar con configuración
     st.sidebar.header("⚙️ Configuración")

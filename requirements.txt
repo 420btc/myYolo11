@@ -1,5 +1,7 @@
 streamlit>=1.47.0
 ultralytics
-opencv-python
+opencv-python-headless
 pillow
-numpy 
+numpy
+torch
+torchvision 

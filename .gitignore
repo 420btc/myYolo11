@@ -76,4 +76,9 @@ Thumbs.db
 .upm/
 
 # UV lock file (muy grande)
-uv.lock 
+uv.lock
+
+# Archivos de deployment específicos (ya incluidos en el repo)
+# Procfile
+# runtime.txt
+# streamlit_deploy.md 

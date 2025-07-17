@@ -32,6 +32,22 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+## 🌐 Deployment en la Nube
+
+### Streamlit Cloud (RECOMENDADO - GRATIS)
+1. Ve a [https://share.streamlit.io/](https://share.streamlit.io/)
+2. Conecta tu cuenta de GitHub
+3. Selecciona este repositorio: `420btc/myYolo11`
+4. Archivo principal: `app.py`
+5. ¡Deploy automático!
+
+### Otras plataformas compatibles:
+- **Railway**: Deployment automático desde GitHub
+- **Render**: Soporte para aplicaciones Python
+- **Heroku**: Incluye `Procfile` y `runtime.txt`
+
+⚠️ **Nota**: Vercel y Netlify NO son compatibles con Streamlit (solo sitios estáticos)
+
 ## 🎮 Uso
 
 1. **Ejecuta la aplicación**:
