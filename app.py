@@ -90,8 +90,8 @@ def main():
     st.sidebar.header("📹 Fuente de Entrada")
     input_type = st.sidebar.radio(
         "Seleccionar fuente:",
-        ["Cámara Web", "Archivo de Video", "Imagen"],
-        help="Elige entre usar tu cámara web, subir un archivo o una imagen"
+        ["Cámara Web", "Captura de Imagen", "Archivo de Video", "Imagen"],
+        help="Elige entre usar tu cámara web, capturar una imagen, subir un archivo o una imagen"
     )
     
     # Información del modelo seleccionado
@@ -131,6 +131,8 @@ def main():
             handle_image_input(confidence, iou)
         elif input_type == "Archivo de Video":
             handle_video_input(confidence, iou)
+        elif input_type == "Captura de Imagen":
+            handle_camera_capture(confidence, iou)
         else:  # Cámara Web
             handle_webcam_input(confidence, iou)
     
@@ -267,6 +269,108 @@ def handle_video_input(confidence, iou):
                     if os.path.exists(temp_path):
                         os.unlink(temp_path)
 
+def init_camera():
+    """Inicializar la cámara con múltiples métodos"""
+    try:
+        # Método 1: Índice 0 (cámara principal)
+        cap = cv2.VideoCapture(0)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret and frame is not None:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                return cap, "✅ Cámara principal inicializada"
+            cap.release()
+        
+        # Método 2: Probar otros índices
+        for i in range(1, 4):
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                    return cap, f"✅ Cámara {i} inicializada"
+                cap.release()
+        
+        # Método 3: Probar con diferentes backends
+        backends = [cv2.CAP_DSHOW, cv2.CAP_V4L2, cv2.CAP_GSTREAMER]
+        for backend in backends:
+            try:
+                cap = cv2.VideoCapture(0, backend)
+                if cap.isOpened():
+                    ret, frame = cap.read()
+                    if ret and frame is not None:
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                        return cap, f"✅ Cámara inicializada con backend {backend}"
+                    cap.release()
+            except:
+                continue
+        
+        return None, "❌ No se encontró ninguna cámara disponible"
+    except Exception as e:
+        return None, f"❌ Error al inicializar la cámara: {str(e)}"
+
+def handle_camera_capture(confidence, iou):
+    """Capturar imagen desde la cámara web usando Streamlit"""
+    st.subheader("📸 Captura de Imagen desde Cámara")
+    
+    if st.session_state.model is None:
+        st.warning("⚠️ Por favor, espera a que se cargue el modelo")
+        return
+    
+    st.info("""
+    📷 **Captura de imagen desde cámara web:**
+    - Esta función usa la cámara web del navegador
+    - Funciona mejor que el streaming de video
+    - Compatible con Streamlit Cloud
+    """)
+    
+    # Usar st.camera_input para capturar imagen
+    camera_image = st.camera_input("Toma una foto para detectar objetos")
+    
+    if camera_image is not None:
+        # Convertir la imagen capturada
+        image = Image.open(camera_image)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Imagen Original")
+            st.image(image, use_container_width=True)
+        
+        with col2:
+            st.subheader("Detecciones")
+            
+            if st.button("🔍 Detectar Objetos", type="primary", key="detect_camera"):
+                with st.spinner("Procesando imagen capturada..."):
+                    try:
+                        # Ejecutar inferencia
+                        results = st.session_state.model(image, conf=confidence, iou=iou, device='cpu')
+                        
+                        # Mostrar imagen con detecciones
+                        annotated_image = results[0].plot()
+                        annotated_pil = Image.fromarray(annotated_image)
+                        st.image(annotated_pil, use_container_width=True)
+                        
+                        # Mostrar resultados
+                        if len(results[0].boxes) > 0:
+                            st.success(f"✅ Detectados {len(results[0].boxes)} objetos")
+                            
+                            # Detalles de detección
+                            with st.expander("Detalles de Detección"):
+                                for i, box in enumerate(results[0].boxes):
+                                    class_id = int(box.cls[0])
+                                    conf = float(box.conf[0])
+                                    class_name = results[0].names[class_id]
+                                    st.write(f"**{i+1}.** {class_name} - Confianza: {conf:.2f}")
+                        else:
+                            st.info("No se detectaron objetos")
+                            
+                    except Exception as e:
+                        st.error(f"❌ Error procesando imagen: {str(e)}")
+
 def handle_webcam_input(confidence, iou):
     """Manejar entrada de cámara web"""
     st.subheader("📷 Detección en Cámara Web")
@@ -275,8 +379,16 @@ def handle_webcam_input(confidence, iou):
         st.warning("⚠️ Por favor, espera a que se cargue el modelo")
         return
     
+    # Información sobre permisos de cámara
+    st.info("""
+    🔒 **Permisos de cámara requeridos:**
+    - En navegador local: Se solicitarán permisos automáticamente
+    - En Streamlit Cloud: La cámara puede no estar disponible por limitaciones de seguridad
+    - **Alternativa:** Usa la función de "Archivo de Video" para subir un video pregrabado
+    """)
+    
     # Botones de control
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         start_button = st.button("🚀 Iniciar Cámara", type="primary")
@@ -284,9 +396,25 @@ def handle_webcam_input(confidence, iou):
     with col2:
         stop_button = st.button("⏹️ Detener Cámara", type="secondary")
     
+    with col3:
+        test_button = st.button("🔍 Probar Cámara", help="Probar diferentes métodos de acceso a la cámara")
+    
     if stop_button:
         st.session_state.stop_camera = True
         st.info("📷 Cámara detenida")
+    
+    if test_button:
+        st.info("🔍 Probando diferentes métodos de acceso a la cámara...")
+        cap, message = init_camera()
+        if cap:
+            st.success(message)
+            cap.release()
+        else:
+            st.error(message)
+            st.warning("💡 **Sugerencias:**")
+            st.write("- Verifica que tu cámara esté conectada")
+            st.write("- Cierra otras aplicaciones que puedan estar usando la cámara")
+            st.write("- Intenta usar la función 'Archivo de Video' como alternativa")
     
     if start_button:
         st.session_state.stop_camera = False
@@ -296,13 +424,18 @@ def handle_webcam_input(confidence, iou):
         info_placeholder = st.empty()
         
         try:
-            # Abrir cámara
-            cap = cv2.VideoCapture(0)
+            # Inicializar cámara con múltiples métodos
+            cap, init_message = init_camera()
             
-            if not cap.isOpened():
-                st.error("❌ No se pudo abrir la cámara")
+            if not cap:
+                st.error(init_message)
+                st.warning("🔄 **Alternativas disponibles:**")
+                st.write("1. **Archivo de Video**: Sube un video pregrabado")
+                st.write("2. **Imagen**: Sube una imagen estática")
+                st.write("3. **Cámara local**: Ejecuta la aplicación localmente con `python run.py`")
                 return
             
+            st.success(init_message)
             frame_count = 0
             
             while not st.session_state.stop_camera:

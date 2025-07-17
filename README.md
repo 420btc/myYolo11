@@ -4,12 +4,15 @@ Una aplicación web simple y moderna para detección de objetos en tiempo real u
 
 ## 🚀 Características
 
-- **Detección en tiempo real** con cámara web
+- **Detección en tiempo real** con cámara web (local)
+- **Captura de imagen** desde cámara web (compatible con Streamlit Cloud)
 - **Procesamiento de videos** subidos
+- **Procesamiento de imágenes** estáticas
 - **5 modelos YOLO11** diferentes (Nano a Extra Large)
 - **Configuración ajustable** de confianza e IoU
 - **Interfaz moderna** y fácil de usar
 - **Detección de 80+ clases** de objetos
+- **Múltiples métodos de acceso** a la cámara
 
 ## 📋 Requisitos
 
@@ -118,6 +121,11 @@ YOLODetector/
 - La aplicación está configurada para usar CPU por defecto
 - Si tienes problemas con CUDA, reinicia la aplicación
 - El rendimiento en CPU es suficiente para la mayoría de casos
+
+### Problemas con la cámara en Streamlit Cloud
+- **Cámara Web**: Puede no funcionar en Streamlit Cloud por limitaciones de seguridad
+- **Solución**: Usa "Captura de Imagen" que funciona mejor en la nube
+- **Alternativa**: Ejecuta localmente con `python run.py` para acceso completo a la cámara
 
 ### Error: "Dependencia faltante"
 ```bash
